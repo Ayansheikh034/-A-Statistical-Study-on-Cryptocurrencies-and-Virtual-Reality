@@ -1,0 +1,192 @@
+---
+title: "Comparision of Risk in Investment in crypto and metaverse token"
+author: "Ayan Bashir Sheikh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+
+
+```{r}
+suppressWarnings({
+library(readxl)
+d1=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Axie Infinity.xlsx")
+d2=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Decentraland.xlsx")
+d3=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Enjin.xlsx")
+d4=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Sandbox.xlsx")
+BTC = read_excel("E:/Bitcoin.xlsx")
+ETH=read.csv("E:\\Ethereum Historical Data.csv")
+
+#colnames(ETH)=colnames(BTC)=c("currency","Date","Close","Open","High","Low")
+ETH$returns = c(0, diff(ETH$Price) / head(ETH$Price, -1))
+
+})
+```
+
+
+
+
+
+
+```{r}
+suppressWarnings({
+library(PerformanceAnalytics)
+VaR_95E = VaR(ETH$returns, p = 0.95, method = "historical");VaR_95E
+CVaR_95E = ES(ETH$returns, p = 0.95, method = "historical");CVaR_95E
+VaR_95B = VaR(BTC$Return, p = 0.95, method = "historical");VaR_95B
+CVaR_95B = ES(BTC$Return, p = 0.95, method = "historical");CVaR_95B
+
+VaR_95A = VaR(d1$Return, p = 0.95, method = "historical");VaR_95A
+CVaR_95A = ES(d1$Return, p = 0.95, method = "historical");CVaR_95A
+VaR_95D = VaR(d2$Return, p = 0.95, method = "historical");VaR_95D
+CVaR_95D = ES(d2$Return, p = 0.95, method = "historical");CVaR_95D
+VaR_95En = VaR(d3$Return, p = 0.95, method = "historical");VaR_95En
+CVaR_95En= ES(d3$Return, p = 0.95, method = "historical");CVaR_95En
+VaR_95s= VaR(d4$Return, p = 0.95, method = "historical");VaR_95s
+CVaR_95s = ES(d4$Return, p = 0.95, method = "historical");CVaR_95s
+
+
+risk_measures = data.frame(
+  Token = c("ETH", "BTC", "LTC", "Axie infinity", "Decentraland", "Enjin", "Sandbox"),
+  VaR = c(VaR_95E, VaR_95B, VaR_95L, VaR_95A, VaR_95D, VaR_95En, VaR_95s),
+  CVaR = c(CVaR_95E, CVaR_95B, CVaR_95L, CVaR_95A, CVaR_95D, CVaR_95En, CVaR_95s)
+)
+
+
+risk_measures
+
+
+})
+```
+
+
+
+
+**Ethereum` :** The historical VaR is -0.06859660 and the CVaR is -0.10896281. This means that, based on past data, the maximum loss expected from ETH in a day is 6.86% under normal market conditions. In the worst-case scenario (i.e., the worst 5% of cases), the expected loss is 10.90%.
+
+
+**Bitcoin:** The historical VaR is -0.05342919 and the CVaR is -0.08864855. This means that, based on past data, the maximum loss expected from BTC in a day is 5.34% under normal market conditions. In the worst-case scenario, the expected loss is 8.86%.
+
+
+**Litcoine:** The historical VaR is -0.07514402 and the CVaR is -0.11226267. This means that, based on past data, the maximum loss expected from LTC in a day is 7.51% under normal market conditions. In the worst-case scenario, the expected loss is 11.23%.
+
+
+**Axie Infinity:** The historical VaR is -0.12117114 and the CVaR is -0.16534219. This means that, based on past data, the maximum loss expected from Axie Infinity in a day is 12.12% under normal market conditions. In the worst-case scenario, the expected loss is 16.53%.
+
+
+**Decentraland:** The historical VaR is -0.11431650 and the CVaR is -0.17017849. This means that, based on past data, the maximum loss expected from Decentraland in a day is 11.43% under normal market conditions. In the worst-case scenario, the expected loss is 17.02%.
+
+
+**Enjin:** The historical VaR is -0.10918033 and the CVaR is -0.16748954. This means that, based on past data, the maximum loss expected from Enjin in a day is 10.92% under normal market conditions. In the worst-case scenario, the expected loss is 16.75%.
+
+**Sandbox:** The historical VaR is -0.12068350 and the CVaR is -0.17679551. This means that, based on past data, the maximum loss expected from Sandbox in a day is 12.07% under normal market conditions. In the worst-case scenario, the expected loss is 17.68%.
+
+
+```{r}
+
+df=data.frame(d1$Return,d2$Return,d3$Return,d4$Return,BTC$Return,ETH$returns)
+
+```
+
+
+
+
+
+
+```{r}
+# Load necessary libraries
+library(PerformanceAnalytics)
+library(rugarch)
+
+# Assuming 'df' is your data frame and 'returns' is the column of returns
+# Replace 'df' and 'returns' with your actual data frame and returns column
+
+# Calculate VaR and CVaR for each cryptocurrency
+colnames(df)= c("axie_infinity_returns", "decentraland_returns", "sandbox_returns", "enjin_returns", "bitcoin_returns", "ethereum_returns")
+  cryptos <- c("axie_infinity", "decentraland", "sandbox", "enjin", "bitcoin", "ethereum")
+for (crypto in cryptos) {
+  returns <- df[[paste0(crypto, "_returns")]]
+  
+  # Fit a GARCH(1,1) model
+  spec <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), 
+                     mean.model = list(armaOrder = c(0, 0), include.mean = TRUE), 
+                     distribution.model = "norm")
+  fit <- ugarchfit(spec, data = returns)
+  
+  # Forecast the next day volatility
+  forecast <- ugarchforecast(fit, n.ahead = 1)
+  sigma <- as.numeric(forecast@forecast$SigmaFor)
+  
+  # Calculate VaR and CVaR
+  VaR_95 <- qnorm(0.05, mean = 0, sd = sigma)
+  CVaR_95 <- (1 / (1 - 0.95)) * dnorm(qnorm(0.95)) * sigma
+  
+  # Print the results
+  print(paste0("VaR at 95% for ", crypto, ": ", VaR_95))
+  print(paste0("CVaR at 95% for ", crypto, ": ", CVaR_95))
+}
+
+
+```
+
+
+
+
+```{r}
+VaRs = c(VaR_95E, VaR_95B, VaR_95A, VaR_95D, VaR_95En, VaR_95s)
+  CVaRs = c(CVaR_95E, CVaR_95B, CVaR_95A, CVaR_95D, CVaR_95En, CVaR_95s)
+cryptos <- c("axie_infinity", "decentraland", "sandbox", "enjin", "bitcoin", "ethereum")
+data <- data.frame(cryptos, VaRs, CVaRs)
+
+# Plot
+library(ggplot2)
+ggplot(data, aes(x=cryptos, y=VaRs)) + 
+  geom_bar(stat="identity", fill="lightblue") +
+  geom_point(aes(y=CVaRs), color="red", size=3) +
+  theme_minimal() +
+  labs(title="VaR and CVaR for Cryptocurrencies", x="Cryptocurrency", y="Value") +
+  geom_text(aes(label=VaRs, y=VaRs), vjust=1.5, color="white") +
+  geom_text(aes(label=CVaRs, y=CVaRs), vjust=-0.5, color="red")
+
+# Table
+library(knitr)
+kable(data, caption = "VaR and CVaR for Cryptocurrencies")
+
+```
+
+
+```{r}
+
+token_VaRs = c( VaR_95A, VaR_95D, VaR_95En, VaR_95s)
+  token_CVaRs = c( CVaR_95L, CVaR_95A, CVaR_95D, CVaR_95En, CVaR_95s)
+  
+crypto_VaRs=c(VaR_95E,VaR_95B)
+crypto_CVaRs=c(CVaR_95E,CVaR_95B)
+
+# Wilcoxon Rank Sum test to compare VaR between cryptocurrencies and Metaverse tokens
+wilcox_test_VaR = wilcox.test(crypto_VaRs, token_VaRs)
+print(paste("p-value for the difference in VaR: ", wilcox_test_VaR$p.value))
+
+# Wilcoxon Rank Sum test to compare CVaR between cryptocurrencies and Metaverse tokens
+wilcox_test_CVaR= wilcox.test(crypto_CVaRs, token_CVaRs)
+print(paste("p-value for the difference in CVaR: ", wilcox_test_CVaR$p.value))
+
+  
+
+```
+
+
+```{r}
+data <- risk_measures
+
+# Melt the data frame to long format for easy plotting with ggplot2
+data_long <- melt(data, id.vars = 'Token')
+
+# Create a time series plot
+ggplot(data_long, aes(x = Token, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "VaR and CVaR for Cryptocurrencies and Tokens", x = "Cryptocurrency and Tokens", y = "Value", fill = "Measure")
+
+```

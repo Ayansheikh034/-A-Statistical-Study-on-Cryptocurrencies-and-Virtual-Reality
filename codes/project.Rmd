@@ -1,0 +1,155 @@
+---
+title: "Project box1"
+author: "Ayan Bashir Sheikh"
+date: "`r Sys.Date()`"
+output:
+
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# EDA in Time series
+
+```{r}
+#library(tseries)
+#library(ggplot2)
+#library(forecast)
+#library(ggfortify)
+
+box1=read.csv("D:\\ST 402 Project\\data\\metaverse tokens\\Metaverse coins\\1BOX.csv")
+box1$Return=c(0, diff(box1$Close)) / box1$Close
+
+attach(box1)
+price_ts=ts(box1$Close)
+plot(price_ts)
+acf(price_ts)
+pacf(price_ts)
+library(forecast)
+fit=auto.arima(price_ts)
+fit
+fit2=arima(price_ts,order=c(0,0,2))
+fit2
+checkresiduals(fit)
+checkresiduals(fit2)
+
+
+#####
+
+
+
+plot(fit2,main="MA(2)  Model")
+plot(fit,main="ARIMA(5,1,1)")
+
+AIC(fit2)
+
+
+```
+
+
+# Forecasts
+```{r}
+forecasts=forecast(fit)
+plot(forecasts)
+
+forecasts2=forecast(fit2)
+plot(forecasts2)
+```
+
+
+# GARCH
+
+```{r}
+#install.packages("rugarch")
+library(rugarch)
+spec=ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), 
+                   mean.model = list(armaOrder = c(0, 0), include.mean = TRUE), 
+                   distribution.model = "norm")
+
+fit1=ugarchfit(spec, data = box1$Return)
+
+show(fit1)
+
+forecasts1=ugarchforecast(fit1, n.ahead = 10)
+```
+
+
+
+
+
+
+
+
+# Markov Chain Model for the Expected Return using the Closing price.
+
+```{r}
+box1$Return=c(0, diff(box1$Close)) / box1$Close
+box1$State=ifelse(box1$Return > 0, "increase", ifelse(box1$Return < 0, "decrease", "no change"))
+
+library(markovchain)
+mc_estimate =markovchainFit(box1$State)
+mc_estimate
+transition_matrix=mc_estimate$estimate@transitionMatrix
+transition_matrix
+
+```
+
+
+
+```{r}
+library(diagram)
+ plotmat(transition_matrix  , pos = c(1,2), 
+         lwd = 1, box.lwd = 2, 
+         cex.txt = 0.8, 
+         box.size = 0.09,
+         box.type = "circle", 
+         box.prop = 0.5, 
+         box.col = "light yellow",
+         arr.length=.1, 
+         self.cex = .4, 
+         self.shifty = -.01, 
+       self.shiftx = .13, 
+         main = "State Transition Diagram")
+
+
+```
+
+
+
+
+
+# Price Movement prediction
+
+```{r}
+df1=read.csv("D:\\ST 402 Project\\data\\metaverse tokens\\Metaverse coins\\1BOX.csv")
+df1$CloseChange=c(0, diff(df1$Close) > 0)  
+df1$CloseChange=ifelse(df1$CloseChange == TRUE, 1, 0)  
+model=glm(CloseChange ~ Open + High + Low + Volume, data = df1, family = binomial)
+summary(model)
+
+plot(model)
+```
+
+
+
+# price Prediction base on closing price (Time series model)
+
+```{r}
+
+# install.packages(c("forecast", "tseries"))
+ library(forecast)
+ library(tseries)
+df1$Close=as.numeric(df1$Close) 
+
+model=auto.arima(df1$Close)
+
+# Forecast the next day's closing price
+forecasted_data=forecast(model, h =2)
+autoplot(forecasted_data$mean)
+
+
+```

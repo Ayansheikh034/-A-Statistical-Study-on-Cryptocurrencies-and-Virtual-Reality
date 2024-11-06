@@ -1,0 +1,151 @@
+---
+title: "TSA BTC "
+author: "Ayan Bashir Sheikh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tseries)
+library(FinTS)
+library(forecast)
+```
+
+```{r}
+
+### Time dependency analysis 
+## this currency is BTC base on the USD currency
+
+BTC=read.csv("D:/ST 402 Project/data/B_E_L Metaverse Tokens/BTC_USD_2020-03-29-CoinDesk.csv")
+colnames(BTC)=c("currency","Date","Close","Open","High","Low")
+#View(BTC)
+attach(BTC)
+##based on the Returns we are going to compare the cryptocurrencies and Metaverse Tokens 
+### how much the risk is invoing this this to 
+#compare the this two in on the basis of their return values.
+
+BTC$returns = c(0, diff(BTC$Close) / head(BTC$Close, -1))
+sd(returns)
+
+```
+
+```{r}
+plot(BTC$returns, type="l")
+acf(BTC$returns)
+pacf(BTC$return)
+```
+
+
+# Augmented Dickey-Fuller Test
+```{r}
+adf.test(BTC$returns) 
+```
+ This test is used to check if a time series is stationary, which means that its properties do not depend on the time at which the series is observed. The null hypothesis is that the time series is not stationary (it has some time-dependent structure). The alternative hypothesis (which is what you want to prove) is that the time series is stationary. The p-value is 0.01, which is usually considered statistically significant, so you would reject the null hypothesis and conclude that the series is stationary.
+
+
+# Phillips-Perron Unit Root Test
+```{r}
+pp.test(BTC$returns)
+```
+ This is another test used to check the stationarity of a time series. Like the Augmented Dickey-Fuller test, the null hypothesis is that the series is not stationary, and the alternative hypothesis is that it is. Again, the p-value is 0.01, so you would reject the null hypothesis and conclude that the series is stationary.
+
+# KPSS Test
+```{r}
+kpss.test(BTC$returns)
+```
+ This test also checks for stationarity, but the null and alternative hypotheses are reversed: the null hypothesis is that the series is stationary, and the alternative hypothesis is that it is not. The p-value is 0.07771, which is above the common significance level of 0.05, so you would not reject the null hypothesis, again suggesting that the series is stationary.
+
+
+# ARCH LM-test
+```{r}
+ArchTest(BTC$returns)
+```
+
+This test checks for autoregressive conditional heteroskedasticity (ARCH) effects in the residuals of a time series model. The null hypothesis is that there are no ARCH effects. The p-value is 0.001853, which is below the common significance level of 0.05, so you would reject the null hypothesis and conclude that there are ARCH effects in the residuals.
+
+
+
+# Model fitting
+```{r}
+
+
+set.seed(2244)
+
+# we decide to train a model on the 80% data and check the accurecy on the 20% data.
+train_size = floor(0.8 * nrow(BTC))
+
+
+train_set = BTC[1:train_size, ]
+test_set = BTC[(train_size + 1):nrow(BTC), ]
+
+
+model = auto.arima(train_set$returns);model
+```
+
+# Computting Accuracy of the model
+```{r}
+initial = floor(0.8 * train_size)
+
+horizon = nrow(BTC) - train_size
+
+forecasts = vector("numeric", horizon)
+
+#  rolling-forecasting origin cross-validation
+for (t in 1:horizon) {
+  
+  refit = Arima(train_set$returns[1:(initial + t - 1)], model=model)
+  fcast = forecast(refit, h=1)
+  
+
+  forecasts[t] = fcast$mean[1]
+}
+
+accuracy(forecasts, test_set$returns)
+
+
+```
+
+# GARCH MODEL
+
+```{r}
+# Load the necessary library
+library(rugarch)
+
+# Specify the GARCH model
+spec = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), 
+                  mean.model = list(armaOrder = c(0, 0), include.mean = TRUE), 
+                  distribution.model = "norm")
+garch_model = ugarchfit(spec, data = train_set$returns)
+
+garch_model 
+```
+
+
+```{r}
+garch_forecast = ugarchforecast(garch_model, n.ahead = 1, data = test_set$returns)
+
+forecasted_returns = fitted(garch_forecast)
+residuals = test_set$returns - forecasted_returns
+
+mae = mean(abs(residuals))
+rmse = sqrt(mean(residuals^2))
+percentage_errors = residuals / test_set$returns
+mpe = mean(percentage_errors)
+
+mape = mean(abs(percentage_errors))
+paste("Mean absolute error=",mae)
+paste("root mean square error=",rmse)
+
+paste("Mean Percentage Error: ", mpe)
+paste("Mean Absolute Percentage Error: ", mape)
+
+```
+
+
+
+

@@ -1,0 +1,58 @@
+---
+title: "Maltivariate GARCH"
+author: "Ayan Bashir Sheikh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(readxl)
+d1=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Axie Infinity.xlsx")
+d2=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Decentraland.xlsx")
+d3=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Enjin.xlsx")
+d4=read_xlsx("D:\\ST 402 Project\\data\\metaverse tokens\\four tokens\\Sandbox.xlsx")
+
+BTC = read_excel("E:/Bitcoin.xlsx")
+ETH=read.csv("D:/ST 402 Project/data/B_E_L Metaverse Tokens/ETH_USD_2020-03-29-CoinDesk.csv")
+LTC=read.csv("D:/ST 402 Project/data/B_E_L Metaverse Tokens/LTC_USD_2020-03-29-CoinDesk.csv")
+colnames(LTC)=colnames(ETH)=colnames(BTC)=c("currency","Date","Close","Open","High","Low")
+
+ETH$returns = c(0, diff(ETH$Close) / head(ETH$Close, -1))
+LTC$returns = c(0, diff(LTC$Close) / head(LTC$Close, -1))
+d1$Date=as.Date(d1$Date)
+d2$Date=as.Date(d2$Date)
+d3$Date=as.Date(d3$Date)
+d4$Date=as.Date(d4$Date)
+BTC$Date=as.Date(BTC$Date)
+returns_d = cbind(ts(d1$Return,start=d1$Date[1],end=d1$Date[nrow(d1)],frequency = 1), ts(d2$Return,start=d2$Date[1],end=d2$Date[nrow(d3)],frequency = 1),ts(d3$Return,start=d3$Date[1],end=d3$Date[nrow(d3)],frequency = 1) ,ts(d4$Return,start=d4$Date[1],end=d4$Date[nrow(d4)],frequency = 1)) 
+
+#ts(BTC$returns,start=2020,end=2022), 
+#ts(ETH$returns,start=2020,end=2022),ts(LTC$returns,start=2020,end=2022))
+colnames(returns_d)=c("Axie infinity","Decentraland","Enjin","sandbox","Bitcoin")
+#"BTC","ETH","LTC")
+
+sd(d1$Return)
+sd(d2$Return)
+sd(d3$Return)
+sd(d4$Return)
+View(d1)
+```
+
+
+```{r}
+library(rugarch)
+
+
+uspec = multispec(replicate(ncol(returns_d[,c(1,5)]), ugarchspec(variance.model = list(model = "sGARCH", 
+                                                                  garchOrder = c(1, 1)), 
+                                            mean.model = list(armaOrder = c(0, 0), 
+                                                              include.mean = TRUE), 
+                                           distribution.model = "norm")))
+
+# Specify the multivariate GARCH model (DCC)
+spec= dccspec(uspec = uspec, dccOrder = c(1, 1), distribution = "mvnorm")
+
+
+dcc_garch = dccfit(spec, data = returns_d[,c(1,5)]);dcc_garch
+plot(dcc_garch)
+```

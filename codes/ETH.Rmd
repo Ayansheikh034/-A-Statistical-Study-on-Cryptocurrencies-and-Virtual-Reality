@@ -1,0 +1,159 @@
+---
+title: "ETH"
+author: "Ayan Bashir Sheikh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r}
+library(tseries)
+library(FinTS)
+library(forecast)
+```
+
+```{r}
+
+### Time dependency analysis 
+## this currency is BTC base on the USD currency
+
+ETH=read.csv("D:/ST 402 Project/data/B_E_L Metaverse Tokens/ETH_USD_2020-03-29-CoinDesk.csv")
+colnames(ETH)=c("currency","Date","Close","Open","High","Low")
+#View(ETH)
+attach(ETH)
+
+##based on the Returns we are going to compare the cryptocurrencies and Metaverse Tokens 
+### how much the risk is invoing this this to 
+#compare the this two in on the basis of their return values.
+
+ETH$returns = c(0, diff(ETH$Close) / head(ETH$Close, -1))
+sd(ETH$returns)
+```
+
+```{r}
+plot(ETH$returns, type="l")
+acf(ETH$returns)
+pacf(ETH$return)
+
+```
+
+
+# Augmented Dickey-Fuller Test
+```{r}
+adf.test(ETH$returns) 
+
+```
+ This test is used to check if a time series is stationary, which means that its properties do not depend on the time at which the series is observed. The null hypothesis is that the time series is not stationary (it has some time-dependent structure). The alternative hypothesis (which is what you want to prove) is that the time series is stationary. The p-value is 0.01, which is usually considered statistically significant, so you would reject the null hypothesis and conclude that the series is stationary.
+
+
+# Phillips-Perron Unit Root Test
+```{r}
+pp.test(ETH$returns)
+
+```
+ This is another test used to check the stationarity of a time series. Like the Augmented Dickey-Fuller test, the null hypothesis is that the series is not stationary, and the alternative hypothesis is that it is. Again, the p-value is 0.01, so you would reject the null hypothesis and conclude that the series is stationary.
+
+# KPSS Test
+```{r}
+kpss.test(ETH$returns)
+
+```
+ This test also checks for stationarity, but the null and alternative hypotheses are reversed: the null hypothesis is that the series is stationary, and the alternative hypothesis is that it is not. The p-value is 0.1, which is above the common significance level of 0.05, so you would not reject the null hypothesis, again suggesting that the series is stationary.
+
+
+# ARCH LM-test
+```{r}
+ArchTest(ETH$returns)
+
+```
+
+This test checks for autoregressive conditional heteroskedasticity (ARCH) effects in the residuals of a time series model. The null hypothesis is that there are no ARCH effects. The p-value of 2.404e-05 (which is very close to 0). This is less than the common significance level of 0.05, so you would reject the null hypothesis.This suggests that there are ARCH effects 
+
+
+
+# Model fitting
+```{r}
+
+
+set.seed(2244)
+
+# We decide to train a model on the 80% data and check the accuracy on the 20% data.
+train_size = floor(0.8 * nrow(ETH))
+
+train_set = ETH[1:train_size, ]
+test_set = ETH[(train_size + 1):nrow(ETH), ]
+
+model = auto.arima(train_set$returns);model
+
+```
+
+# Computting Accuracy of the model
+```{r}
+initial = floor(0.8 * train_size)
+
+horizon = nrow(ETH) - train_size
+
+forecasts = vector("numeric", horizon)
+
+# Rolling-forecasting origin cross-validation
+for (t in 1:horizon) {
+  
+  refit = Arima(train_set$returns[1:(initial + t - 1)], model=model)
+  fcast = forecast(refit, h=1)
+  
+
+  forecasts[t] = fcast$mean[1]
+}
+
+accuracy(forecasts, test_set$returns)
+
+
+
+```
+
+```{r}
+# Load the necessary library
+library(rugarch)
+
+# Specify the GARCH model
+spec = ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)), 
+                  mean.model = list(armaOrder = c(0, 0), include.mean = TRUE), 
+                  distribution.model = "norm")
+
+garch_model = ugarchfit(spec, data = train_set$returns)
+
+garch_model
+
+```
+
+
+```{r}
+garch_forecast = ugarchforecast(garch_model, n.ahead = 1, data = test_set$returns)
+
+forecasted_returns = fitted(garch_forecast)
+residuals = test_set$returns - forecasted_returns
+
+mae = mean(abs(residuals))
+rmse = sqrt(mean(residuals^2))
+percentage_errors = residuals / test_set$returns
+mpe = mean(percentage_errors)
+
+mape = mean(abs(percentage_errors))
+paste("Mean absolute error=",mae)
+paste("root mean square error=",rmse)
+
+paste("Mean Percentage Error: ", mpe)
+paste("Mean Absolute Percentage Error: ", mape)
+
+```
+
+
+```{r}
+library(PerformanceAnalytics)
+VaR_95 = VaR(ETH$returns, p = 0.95, method = "historical");VaR_95
+CVaR_95 = ES(ETH$returns, p = 0.95, method = "historical");CVaR_95
+
+```
+**Value at Risk (VaR)** A VaR of -0.09852328 at the 95% confidence level means that there is a 5% chance that the loss will be greater than 9.85% over the given time horizon. In other words, you are 95% confident that your worst loss will not exceed 9.85%.
+
+
+
+**Conditional Value at Risk (CVaR)** A CVaR of -0.1484256 at the 95% confidence level means that, given that the loss is greater than the VaR (9.85%), the average loss will be 14.84%. It provides an idea of what to expect in the worst-case scenarios.
