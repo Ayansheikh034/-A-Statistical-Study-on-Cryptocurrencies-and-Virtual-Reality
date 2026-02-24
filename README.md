@@ -69,6 +69,36 @@ The research integrates **time-series econometrics, statistical learning, and AI
 * Partial Dependence Analysis
 
 ---
+## Methodological Workflow
+
+### 1. Data Preparation
+
+Cryptocurrency price data were transformed into log-returns to stabilize variance and make the series suitable for statistical modeling. Missing observations were handled and exploratory visualization was performed to identify volatility clustering and structural behaviour.
+
+### 2. Stationarity Assessment
+
+Stationarity was evaluated using ADF, Phillips–Perron, and KPSS tests. These tests guided model selection by confirming whether differencing was required before applying time-series models.
+
+### 3. Time-Series Modeling
+
+ACF and PACF diagnostics were used to identify dependency structures. ARIMA models were fitted to capture short-run dynamics, followed by residual diagnostics to verify model adequacy.
+
+### 4. Long-Run Relationship Analysis
+
+Johansen Cointegration tests were applied to investigate equilibrium relationships among Metaverse cryptocurrencies. When cointegration was detected, a Vector Error Correction Model (VECM) was used to analyze short-run adjustments toward long-run equilibrium.
+
+### 5. Risk Measurement
+
+Financial risk was quantified using Value at Risk (VaR) and Conditional Value at Risk (CVaR) to capture tail-risk exposure inherent in cryptocurrency markets.
+
+### 6. Market State Prediction
+
+Markov chain modeling was used to represent transitions between market regimes, allowing probabilistic interpretation of future price states.
+
+### 7. Machine Learning Analysis
+
+Random Forest and Logistic Regression models were applied to VR user-experience data to explore behavioural patterns and nonlinear feature relationships.
+
 
 ## Key Insights
 
